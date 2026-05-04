@@ -1,0 +1,103 @@
+-- [[ THE EXECUTOR FINGER GUN SCRIPT ]] --
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local character = player.Character or player.CharacterAdded:Wait()
+local runService = game:GetService("RunService")
+
+-- 1. ระบบอมตะและออร่าแสงที่หัว (Dark Aura)
+local function applyDarkAura()
+    local head = character:WaitForChild("Head")
+    local hum = character:WaitForChild("Humanoid")
+    
+    hum.MaxHealth = math.huge
+    hum.Health = math.huge
+    
+    -- สร้างแสงสีแดงเข้มพุ่งจากหัว
+    local attachment = Instance.new("Attachment", head)
+    local light = Instance.new("PointLight", head)
+    light.Color = Color3.fromRGB(255, 0, 0)
+    light.Range = 15
+    light.Brightness = 3
+    
+    local particles = Instance.new("ParticleEmitter", head)
+    particles.Texture = "rbxassetid://243098098"
+    particles.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0), Color3.fromRGB(255, 0, 0))
+    particles.Size = NumberSequence.new(0.5, 0)
+    particles.Speed = NumberRange.new(5)
+    particles.VelocitySpread = 180
+    particles.Rate = 50
+end
+
+-- 2. ระบบนิ้วสั่งตาย (Raycast Finger Gun)
+mouse.Button1Down:Connect(function()
+    -- ท่าทางนิ้วชี้ (ใช้ Animation สั่งแขนยก)
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://204328711" -- ท่าชี้
+    local loadAnim = character.Humanoid:LoadAnimation(anim)
+    loadAnim:Play()
+
+    -- สร้างเส้นแสงสีแดงพุ่งจากมือ
+    local rayOrigin = character:FindFirstChild("RightHand") and character.RightHand.Position or character["Right Arm"].Position
+    local rayDirection = (mouse.Hit.p - rayOrigin).Unit * 500
+    
+    local beam = Instance.new("Part", workspace)
+    beam.Name = "DeathBeam"
+    beam.Anchored = true
+    beam.CanCollide = false
+    beam.Material = Enum.Material.Neon
+    beam.Color = Color3.fromRGB(255, 0, 0)
+    beam.Size = Vector3.new(0.2, 0.2, (rayOrigin - mouse.Hit.p).Magnitude)
+    beam.CFrame = CFrame.new(rayOrigin, mouse.Hit.p) * CFrame.new(0, 0, -beam.Size.Z/2)
+    game.Debris:AddItem(beam, 0.1)
+
+    -- เช็คเป้าหมาย
+    local target = mouse.Target
+    if target and target.Parent:FindFirstChild("Humanoid") then
+        local enemyHum = target.Parent.Humanoid
+        local enemyRoot = target.Parent:FindFirstChild("HumanoidRootPart")
+        
+        -- ดาเมจมหาศาล (ตายจริง)
+        enemyHum.Health = 0
+        
+        -- เอฟเฟกต์ตอนโดนยิง (วิญญาณระเบิด)
+        if enemyRoot then
+            local explosion = Instance.new("Explosion")
+            explosion.Position = enemyRoot.Position
+            explosion.BlastRadius = 0
+            explosion.Parent = workspace
+            
+            local p = Instance.new("ParticleEmitter", enemyRoot)
+            p.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+            p.Size = NumberSequence.new(2)
+            p.Rate = 200
+            p.Lifetime = NumberRange.new(1)
+            game.Debris:AddItem(p, 1)
+        end
+    end
+end)
+
+-- 3. ระบบบิน (แถมให้เผื่ออยากโฉบไปยิงคน)
+local flying = false
+local speed = 2
+game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.F then -- กด F เพื่อลอยตัว
+        flying = not flying
+        character.Humanoid.PlatformStand = flying
+    end
+end)
+
+runService.RenderStepped:Connect(function()
+    if flying then
+        character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+        local cam = workspace.CurrentCamera.CFrame
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then
+            character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0,0,-speed)
+        end
+        -- หันตามกล้อง
+        character.HumanoidRootPart.CFrame = CFrame.new(character.HumanoidRootPart.Position, character.HumanoidRootPart.Position + cam.LookVector)
+    end
+end)
+
+applyDarkAura()
+print("สคริปต์นิ้วสั่งตาย [RED-DARK] ทำงาน! คลิกซ้ายเพื่อพิพากษา!")
