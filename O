@@ -1,0 +1,61 @@
+-- [[ DARK SOUL: HEAD GLOW & KILL AURA ]] --
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local runService = game:GetService("RunService")
+
+-- 1. สร้างแสงออกจากผม/ศีรษะ
+local function createHeadLight()
+    local head = character:WaitForChild("Head")
+    
+    -- ลบอันเก่าถ้ามี
+    if head:FindFirstChild("DarkAura") then head.DarkAura:Destroy() end
+    
+    -- สร้าง PointLight (แสงส่องสว่าง)
+    local light = Instance.new("PointLight")
+    light.Name = "DarkAura"
+    light.Color = Color3.fromRGB(0, 0, 0) -- สีดำ (หรือปรับเป็นม่วงเข้ม/แดงเข้มเพื่อให้เห็นแสง)
+    light.Range = 15
+    light.Brightness = 5
+    light.Parent = head
+    
+    -- สร้าง Particle (แสงพุ่งออกจากผม)
+    local particles = Instance.new("ParticleEmitter")
+    particles.Name = "DarkParticles"
+    particles.Texture = "rbxassetid://243098098" -- ลายแสง/ควัน
+    particles.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0), Color3.fromRGB(50, 0, 0))
+    particles.Rate = 100
+    particles.Speed = NumberRange.new(5, 10)
+    particles.VelocityResistance = 1
+    particles.Lifetime = NumberRange.new(0.5, 1)
+    particles.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)})
+    particles.Parent = head
+end
+
+-- 2. ระบบ Kill Aura (ใครเข้าใกล้ = ตาย)
+local killDistance = 15 -- ระยะความแรงของแสงที่ทำให้ตาย
+
+runService.RenderStepped:Connect(function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        for _, v in pairs(game.Players:GetPlayers()) do
+            if v ~= player and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
+                if dist < killDistance then
+                    -- ส่งความตาย (ถ้าแมพกันฆ่าไม่ได้อาจต้องใช้ TakeDamage)
+                    v.Character.Humanoid.Health = 0
+                end
+            end
+        end
+    end
+end)
+
+-- 3. ระบบอมตะ (God Mode) ล็อคเลือดตัวเอง
+local function applyGod()
+    character.Humanoid.MaxHealth = math.huge
+    character.Humanoid.Health = math.huge
+end
+
+-- รันระบบ
+createHeadLight()
+applyGod()
+
+print("Dark Soul Script: แสงแห่งความตายทำงานแล้ว!")
